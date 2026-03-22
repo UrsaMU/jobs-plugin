@@ -1,6 +1,6 @@
 {
   "name": "jobs",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Anomaly-style jobs/request tracking system — player requests, staff commands, bucket access, archive, and REST API.",
   "ursamu": ">=1.9.0",
   "author": "UrsaMU",

@@ -1,8 +1,9 @@
 // ─── REST API: /api/v1/jobs ───────────────────────────────────────────────────
 
 import { dbojs } from "@ursamu/ursamu";
-import { jobs, jobArchive, jobHooks, getNextJobNumber } from "@ursamu/ursamu/jobs";
-import type { IJob, IJobComment } from "@ursamu/ursamu/jobs";
+import { jobs, jobArchive, getNextJobNumber } from "./db.ts";
+import { jobHooks } from "./hooks.ts";
+import type { IJob, IJobComment } from "./types.ts";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 

@@ -2,26 +2,33 @@
  * @module @ursamu/jobs-plugin
  * @description Anomaly-style jobs/request system for UrsaMU.
  *
- * Re-exports the engine's job domain types and hooks for convenience, plus
- * provides the plugin entry point that wires up in-game commands, REST routes,
- * and staff notifications.
+ * Self-contained — provides its own types, database layer, and event hooks.
+ * The engine (`@ursamu/ursamu`) is only used for infrastructure primitives
+ * (DBO, addCmd, registerPluginRoute, etc.); no jobs knowledge lives there.
  *
  * Install via `plugins.manifest.json`:
  * ```json
- * { "plugins": [{ "name": "jobs", "url": "https://github.com/UrsaMU/jobs-plugin", "ref": "v1.0.0" }] }
+ * { "plugins": [{ "name": "jobs", "url": "https://github.com/UrsaMU/jobs-plugin", "ref": "v1.1.0" }] }
  * ```
  *
- * Or consume the hooks/types in another plugin:
+ * Subscribe to job lifecycle events in another plugin:
  * ```ts
- * import { jobHooks } from "@ursamu/ursamu/jobs";
+ * import { jobHooks } from "@ursamu/jobs-plugin";
  * jobHooks.on("job:created", (job) => console.log(job.title));
  * ```
  */
 
-// Re-export domain types and hooks from the engine's ./jobs sub-path
-// so dependents can use @ursamu/jobs-plugin as their single import.
-export { jobHooks, jobs, jobArchive, jobAccess, getNextJobNumber, registerJobBuckets, isValidBucket, getAllBuckets, getBucketStaffIds } from "@ursamu/ursamu/jobs";
-export type { IJob, IJobComment, IJobAccess } from "@ursamu/ursamu/jobs";
+// Domain types
+export { VALID_BUCKETS } from "./src/types.ts";
+export type { IJob, IJobComment, IJobAccess, JobBucket } from "./src/types.ts";
+
+// Database layer
+export { jobs, jobArchive, jobAccess, getNextJobNumber, registerJobBuckets, isValidBucket, getAllBuckets, getBucketStaffIds } from "./src/db.ts";
+export type { IJobBucketOptions } from "./src/db.ts";
+
+// Event hooks
+export { jobHooks } from "./src/hooks.ts";
+export type { IJobHooks, JobHookMap } from "./src/hooks.ts";
 
 // Plugin entry point
 export { default } from "./src/index.ts";

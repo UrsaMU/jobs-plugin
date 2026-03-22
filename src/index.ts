@@ -2,7 +2,7 @@
 
 import "./commands.ts";
 import { registerPluginRoute } from "@ursamu/ursamu";
-import { getAllBuckets, getBucketStaffIds, jobAccess } from "@ursamu/ursamu/jobs";
+import { getAllBuckets, getBucketStaffIds, jobAccess } from "./db.ts";
 import type { IPlugin } from "@ursamu/ursamu";
 import { jobsRouteHandler } from "./router.ts";
 import { registerNotifyHooks, removeNotifyHooks } from "./notify.ts";

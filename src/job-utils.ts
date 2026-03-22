@@ -1,7 +1,7 @@
 // ─── Shared helpers used by player and staff command handlers ─────────────────
 
-import { jobs, jobAccess } from "@ursamu/ursamu/jobs";
-import type { IJob } from "@ursamu/ursamu/jobs";
+import { jobs, jobAccess } from "./db.ts";
+import type { IJob } from "./types.ts";
 
 /**
  * Resolves a job by sequential number.

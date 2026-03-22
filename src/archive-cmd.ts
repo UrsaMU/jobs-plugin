@@ -2,7 +2,7 @@
 
 import { addCmd } from "@ursamu/ursamu";
 import type { IUrsamuSDK } from "@ursamu/ursamu";
-import { jobArchive } from "@ursamu/ursamu/jobs";
+import { jobArchive } from "./db.ts";
 import { isStaffFlags, header, divider, footer, formatTimeShort, formatDate } from "./format.ts";
 
 addCmd({

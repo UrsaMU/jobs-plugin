@@ -1,8 +1,8 @@
 // ─── Staff notification for new jobs ─────────────────────────────────────────
 
-import { jobHooks } from "@ursamu/ursamu/jobs";
+import { jobHooks } from "./hooks.ts";
 import { wsService, send, dbojs } from "@ursamu/ursamu";
-import type { IJob } from "@ursamu/ursamu/jobs";
+import type { IJob } from "./types.ts";
 
 const STAFF_FLAGS = ["superuser", "admin", "wizard"] as const;
 

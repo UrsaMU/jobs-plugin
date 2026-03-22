@@ -2,8 +2,9 @@
 
 import { addCmd } from "@ursamu/ursamu";
 import type { IUrsamuSDK } from "@ursamu/ursamu";
-import { jobs, jobArchive, jobHooks, getNextJobNumber, isValidBucket, getAllBuckets } from "@ursamu/ursamu/jobs";
-import type { IJob, IJobComment } from "@ursamu/ursamu/jobs";
+import { jobs, jobArchive, getNextJobNumber, isValidBucket, getAllBuckets } from "./db.ts";
+import { jobHooks } from "./hooks.ts";
+import type { IJob, IJobComment } from "./types.ts";
 import { jobHeader, jobFooter, jobDivider, formatTimeFull, formatTimeShort, formatDate, getEscalation, isNew, formatJobList } from "./format.ts";
 import { getJobByNumber } from "./job-utils.ts";
 import { sendJobMail } from "./mail.ts";
