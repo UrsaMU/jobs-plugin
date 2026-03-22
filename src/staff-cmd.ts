@@ -8,10 +8,24 @@ import { isStaffFlags, header, jobHeader, jobFooter, jobDivider, formatTimeFull,
 import { getJobByNumber, canStaffSeeBucket } from "./job-utils.ts";
 import { sendJobMail } from "./mail.ts";
 
+/**
+ * Returns the best available display name for the calling player.
+ * Preference order: moniker → state.name → db name → "Unknown".
+ */
 function callerName(u: IUrsamuSDK): string {
   return (u.me.state?.moniker as string) || (u.me.state?.name as string) || u.me.name || "Unknown";
 }
 
+/**
+ * Sends the staff job list to the calling player, filtered by bucket access
+ * and optionally by a specific bucket name.
+ *
+ * Non-superusers only see buckets they have access to (per `server.jobs_access`).
+ * If no jobs match the filter the player receives a "no open jobs" message.
+ *
+ * @param u            UrsaMU SDK context.
+ * @param filterBucket Optional bucket name (uppercase) to restrict the listing.
+ */
 export async function listStaffJobs(u: IUrsamuSDK, filterBucket?: string): Promise<void> {
   if (!isStaffFlags(u.me.flags)) { u.send(">JOBS: Staff only."); return; }
   const allJobs = await jobs.find({});
@@ -268,6 +282,7 @@ addCmd({
   help: `+jobs  — List all open jobs (staff only).
 
 Examples:
-  +jobs   Show all open jobs visible to you.`,
+  +jobs   Show all open jobs visible to your role.
+  +jobs   Superusers see every bucket; others only see their permitted buckets.`,
   exec: async (u: IUrsamuSDK) => { await listStaffJobs(u); },
 });

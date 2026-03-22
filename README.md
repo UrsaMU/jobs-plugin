@@ -68,7 +68,64 @@ The engine's `ensurePlugins()` will clone and load it automatically on next rest
 | `DELETE` | `/api/v1/jobs/:id` | Bearer (staff) | Delete a job and fire job:deleted hook |
 | `POST` | `/api/v1/jobs/:id/comment` | Bearer | Add a comment |
 
-Query params for `GET /api/v1/jobs`: `status`, `category`, `priority`, `assignedTo`, `submittedBy`, `limit` (max 200), `offset`.
+### Query parameters — `GET /api/v1/jobs`
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `status` | string | Filter by status (`new`, `open`, `closed`, `resolved`, `cancelled`) |
+| `category` | string | Filter by category/bucket name |
+| `priority` | string | Filter by priority (`low`, `normal`, `high`) |
+| `assignedTo` | string | Filter by assigned staff player ID |
+| `submittedBy` | string | Filter by submitter player ID |
+| `limit` | number | Max results to return (default 50, max 200) |
+| `offset` | number | Pagination offset (default 0) |
+
+### Request/response bodies
+
+**`POST /api/v1/jobs`** — body:
+```json
+{
+  "title": "Login page is broken",
+  "description": "Getting a 500 when I click sign in.",
+  "category": "bug",
+  "priority": "high",
+  "staffOnly": false
+}
+```
+Response `201`: the full `IJob` object.
+
+**`PATCH /api/v1/jobs/:id`** — body (all fields optional):
+```json
+{
+  "status": "closed",
+  "priority": "normal",
+  "assignedTo": "player-id",
+  "title": "Updated title",
+  "description": "Updated description"
+}
+```
+Response `200`: the updated `IJob` object.
+
+**`POST /api/v1/jobs/:id/comment`** — body:
+```json
+{
+  "text": "Working on it now.",
+  "staffOnly": false
+}
+```
+Response `201`: the created `IJobComment` object.
+
+**`GET /api/v1/jobs/stats`** — response `200`:
+```json
+{
+  "total": 42,
+  "byStatus": { "open": 30, "closed": 12 },
+  "byCategory": { "bug": 10, "request": 32 },
+  "byPriority": { "normal": 35, "high": 7 },
+  "openAssigned": 15,
+  "openUnassigned": 15
+}
+```
 
 ## Events
 
@@ -105,6 +162,41 @@ All collections share the same Deno KV instance as the engine:
 | `server.jobs_access` | `IJobAccess` | Per-bucket staff access lists |
 | `server.counters["jobid"]` | number | Auto-increment job number |
 | `server.mail` | `IMail` | Outgoing job notification mails |
+
+### `IJob` schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string` | Unique ID, e.g. `"job-42"` |
+| `number` | `number` | Sequential job number |
+| `title` | `string` | Job title |
+| `bucket` | `string` | In-game bucket (BUG, PLOT, etc.) |
+| `category` | `string` | REST API category label |
+| `status` | `"new" \| "open" \| "closed" \| "cancelled" \| "resolved"` | Current status |
+| `priority` | `"low" \| "normal" \| "high"` | Priority level |
+| `description` | `string` | Full description text |
+| `submittedBy` | `string` | Player ID of submitter |
+| `submitterName` | `string` | Display name of submitter |
+| `assignedTo` | `string?` | Player ID of assigned staff |
+| `assigneeName` | `string?` | Display name of assigned staff |
+| `comments` | `IJobComment[]` | All comments (staff-only filtered for players) |
+| `additionalPlayers` | `string[]?` | Player IDs granted view access |
+| `staffOnly` | `boolean?` | REST API: hidden from non-staff |
+| `closedByName` | `string?` | Display name of who closed the job |
+| `createdAt` | `number` | Unix timestamp — job creation |
+| `updatedAt` | `number` | Unix timestamp — last modification |
+
+### `IJobComment` schema
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | `string?` | UUID (REST API only) |
+| `authorId` | `string` | Player ID of comment author |
+| `authorName` | `string` | Display name of comment author |
+| `text` | `string` | Comment text |
+| `timestamp` | `number` | Unix timestamp |
+| `published` | `boolean?` | Visible to job submitter (in-game) |
+| `staffOnly` | `boolean?` | Visible to staff only (REST API) |
 
 ## Buckets
 

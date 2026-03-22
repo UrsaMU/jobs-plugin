@@ -8,10 +8,21 @@ import { jobHeader, jobFooter, jobDivider, formatTimeFull, formatTimeShort, form
 import { getJobByNumber } from "./job-utils.ts";
 import { sendJobMail } from "./mail.ts";
 
+/**
+ * Returns the best available display name for the calling player.
+ * Preference order: moniker → state.name → db name → "Unknown".
+ */
 function callerName(u: IUrsamuSDK): string {
   return (u.me.state?.moniker as string) || (u.me.state?.name as string) || u.me.name || "Unknown";
 }
 
+/**
+ * Sends a formatted view of a single job to the calling player.
+ * Only published comments are shown (staff-only comments are hidden).
+ *
+ * @param u   UrsaMU SDK context — used for `u.send()` and formatting helpers.
+ * @param job The job to display.
+ */
 async function showRequest(u: IUrsamuSDK, job: IJob): Promise<void> {
   const esc = getEscalation(job);
   const bucket = job.bucket || job.category || "???";
@@ -193,7 +204,8 @@ addCmd({
   help: `+requests  — List all of your open requests.
 
 Examples:
-  +requests   Show all open requests you submitted or are viewing.`,
+  +requests   Show all open requests you submitted.
+  +requests   Also shows requests you were added to as a viewer.`,
   exec: async (u: IUrsamuSDK) => {
     const myJobs = (await jobs.find({})).filter(
       (j) => j.submittedBy === u.me.id || j.additionalPlayers?.includes(u.me.id),
@@ -211,7 +223,8 @@ addCmd({
   help: `+myjobs  — List your open requests (alias for +requests). Superusers see all jobs.
 
 Examples:
-  +myjobs   Show open requests. Superusers see all open jobs.`,
+  +myjobs   Show your open requests (same as +requests).
+  +myjobs   Superusers: shows all open jobs across all players.`,
   exec: async (u: IUrsamuSDK) => {
     const all = await jobs.find({});
     if (u.me.flags.has("superuser")) {

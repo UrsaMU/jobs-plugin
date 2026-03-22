@@ -6,10 +6,16 @@ import type { IJob, IJobComment } from "@ursamu/ursamu/jobs";
 
 const JSON_HEADERS = { "Content-Type": "application/json" };
 
+/** Convenience helper — wraps `data` in a JSON response with `status` (default 200). */
 function ok(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), { status, headers: JSON_HEADERS });
 }
 
+/**
+ * Returns true when `userId` corresponds to a player with an admin, wizard, or
+ * superuser flag. Uses a `Set` split on the stored flag string to prevent
+ * substring bypass attacks (e.g. `"notadmin"` must not match `"admin"`).
+ */
 async function isStaffUser(userId: string | null): Promise<boolean> {
   if (!userId) return false;
   const player = await dbojs.queryOne({ id: userId });
@@ -19,10 +25,19 @@ async function isStaffUser(userId: string | null): Promise<boolean> {
   return flagSet.has("admin") || flagSet.has("wizard") || flagSet.has("superuser");
 }
 
+/**
+ * Returns a shallow copy of `job` with all `staffOnly` comments removed,
+ * safe to send in REST responses to non-staff callers.
+ */
 function stripStaffComments(job: IJob): IJob {
   return { ...job, comments: job.comments.filter((c) => !c.staffOnly) };
 }
 
+/**
+ * Resolves a job by its `idParam` string, which may be either a sequential
+ * job number (e.g. `"42"`) or a full UUID string (e.g. `"job-42"`).
+ * Returns `null` if no matching active job is found.
+ */
 async function resolveJob(idParam: string): Promise<IJob | null> {
   const num = parseInt(idParam, 10);
   if (!isNaN(num)) return (await jobs.queryOne({ number: num })) || null;
@@ -34,13 +49,61 @@ async function resolveJob(idParam: string): Promise<IJob | null> {
 /**
  * Handles all /api/v1/jobs routes.
  *
- * GET    /api/v1/jobs            — List jobs (staff sees all; players see own)
- * POST   /api/v1/jobs            — Create a job
- * GET    /api/v1/jobs/stats      — Aggregate stats (staff only)
- * GET    /api/v1/jobs/:id        — Get a single job
- * PATCH  /api/v1/jobs/:id        — Update a job (staff only)
- * DELETE /api/v1/jobs/:id        — Delete a job (staff only)
- * POST   /api/v1/jobs/:id/comment — Add a comment
+ * ---
+ * GET /api/v1/jobs
+ *   Auth:    Bearer required
+ *   Params:  status, category, priority, assignedTo, submittedBy, limit (max 200), offset
+ *   200:     IJob[]  (staff: all matching; players: own only, staffOnly comments stripped)
+ *   401:     { error: "Unauthorized" }
+ *
+ * POST /api/v1/jobs
+ *   Auth:    Bearer required
+ *   Body:    { title: string, description: string, category?: string,
+ *              priority?: string, staffOnly?: boolean }
+ *   201:     IJob  (newly created job)
+ *   400:     { error: "title and description are required" }
+ *   401:     { error: "Unauthorized" }
+ *   403:     { error: "Forbidden: staffOnly requires staff privileges" }
+ *
+ * GET /api/v1/jobs/stats
+ *   Auth:    Bearer required (staff only)
+ *   200:     { total, byStatus, byCategory, byPriority, openAssigned, openUnassigned }
+ *   401:     { error: "Unauthorized" }
+ *   403:     { error: "Forbidden" }
+ *
+ * GET /api/v1/jobs/:id
+ *   Auth:    Bearer required
+ *   :id:     job number (e.g. "5") or UUID (e.g. "job-5")
+ *   200:     IJob  (staffOnly comments stripped for non-staff)
+ *   401:     { error: "Unauthorized" }
+ *   403:     { error: "Forbidden" }
+ *   404:     { error: "Not found" }
+ *
+ * PATCH /api/v1/jobs/:id
+ *   Auth:    Bearer required (staff only)
+ *   Body:    Partial<{ status, priority, assignedTo, title, description }>
+ *   200:     IJob  (updated job)
+ *   400:     { error: "Invalid JSON body" }
+ *   401:     { error: "Unauthorized" }
+ *   403:     { error: "Forbidden" }
+ *   404:     { error: "Not found" }
+ *
+ * DELETE /api/v1/jobs/:id
+ *   Auth:    Bearer required (staff only)
+ *   204:     { deleted: true }
+ *   401:     { error: "Unauthorized" }
+ *   403:     { error: "Forbidden" }
+ *   404:     { error: "Not found" }
+ *
+ * POST /api/v1/jobs/:id/comment
+ *   Auth:    Bearer required
+ *   Body:    { text: string, staffOnly?: boolean }
+ *   201:     IJobComment  (the newly created comment)
+ *   400:     { error: "text is required" }
+ *   401:     { error: "Unauthorized" }
+ *   403:     { error: "Forbidden" }
+ *   404:     { error: "Not found" }
+ * ---
  *
  * Auth: Bearer JWT required (userId supplied by engine router middleware).
  */
