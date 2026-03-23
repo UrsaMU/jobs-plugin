@@ -1,6 +1,6 @@
 {
   "name": "@ursamu/jobs-plugin",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Anomaly-style job/request tracking system for UrsaMU — player requests, staff commands, bucket access, archive, and REST API.",
   "exports": "./mod.ts",
   "publish": {

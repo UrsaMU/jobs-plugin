@@ -1,6 +1,8 @@
 // ─── Job lifecycle hooks — typed event bus ────────────────────────────────────
 
+import "./game-hooks-augment.ts"; // activates GameHookMap declaration merging
 import type { IJob, IJobComment } from "./types.ts";
+import { gameHooks } from "@ursamu/ursamu";
 
 // ─── hook type map ─────────────────────────────────────────────────────────────
 
@@ -58,8 +60,13 @@ export const jobHooks: IJobHooks = {
    * jobHooks.on("job:created", (job) => console.log(`New job #${job.number}`));
    * ```
    */
+  /**
+   * Subscribe to a job lifecycle event.
+   * Idempotent — registering the same handler reference twice is a no-op.
+   */
   on<K extends keyof JobHookMap>(event: K, handler: JobHookMap[K]): void {
-    (_handlers[event] as JobHookMap[K][]).push(handler);
+    const list = _handlers[event] as JobHookMap[K][];
+    if (!list.includes(handler)) list.push(handler);
   },
 
   /** Remove a previously registered handler. */
@@ -69,7 +76,8 @@ export const jobHooks: IJobHooks = {
     if (idx !== -1) list.splice(idx, 1);
   },
 
-  /** Fire all registered handlers for an event (errors are caught and logged). */
+  /** Fire all registered handlers for an event (errors are caught and logged).
+   *  Also bridges to gameHooks so plugins without a jobs dependency can listen. */
   async emit<K extends keyof JobHookMap>(
     event: K,
     ...args: Parameters<JobHookMap[K]>
@@ -81,5 +89,9 @@ export const jobHooks: IJobHooks = {
         console.error(`[jobs] Uncaught error in hook "${event}":`, e);
       }
     }
+    // Bridge: re-emit on gameHooks so plugins without a jobs dependency can
+    // listen via gameHooks.on("job:created", ...) instead of jobHooks.on().
+    await (gameHooks as unknown as { emit(e: string, ...a: unknown[]): Promise<void> })
+      .emit(event as string, ...(args as unknown[]));
   },
 };
