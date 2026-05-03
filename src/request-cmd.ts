@@ -5,7 +5,7 @@ import type { IUrsamuSDK } from "@ursamu/ursamu";
 import { jobs, jobArchive, getNextJobNumber, isValidBucket, getAllBuckets } from "./db.ts";
 import { jobHooks } from "./hooks.ts";
 import type { IJob, IJobComment } from "./types.ts";
-import { jobHeader, jobFooter, jobDivider, formatTimeFull, formatTimeShort, formatDate, getEscalation, isNew, formatJobList } from "./format.ts";
+import { jobHeader, jobFooter, jobDivider, formatTimeFull, formatDate, getEscalation, isNew, formatJobList, wrapText } from "./format.ts";
 import { getJobByNumber } from "./job-utils.ts";
 import { sendJobMail } from "./mail.ts";
 
@@ -24,7 +24,7 @@ function callerName(u: IUrsamuSDK): string {
  * @param u   UrsaMU SDK context — used for `u.send()` and formatting helpers.
  * @param job The job to display.
  */
-async function showRequest(u: IUrsamuSDK, job: IJob): Promise<void> {
+function showRequest(u: IUrsamuSDK, job: IJob): void {
   const esc = getEscalation(job);
   const bucket = job.bucket || job.category || "???";
   const statusLabel = esc.label ? `${esc.color}${esc.label}%cn` : "";
@@ -39,15 +39,14 @@ async function showRequest(u: IUrsamuSDK, job: IJob): Promise<void> {
   lines.push(formatTimeFull(job.createdAt));
   lines.push(`Additional Players: ${job.additionalPlayers?.join(", ") || ""}`);
   lines.push(jobDivider());
-  lines.push(job.description);
-  const pubComments = job.comments.filter((c) => c.published);
-  if (pubComments.length > 0) {
-    lines.push("");
-    for (const c of pubComments) {
-      lines.push(`%ch%cy${c.authorName}%cn [${formatTimeShort(c.timestamp)}]: ${c.text}`);
-    }
+  lines.push(...wrapText(job.description));
+  const pubComments = job.comments.filter((c) => !c.staffOnly);
+  for (const c of pubComments) {
+    lines.push(jobDivider());
+    lines.push(`  %ch%cy${c.authorName}%cn commented on ${formatDate(c.timestamp)}:`);
+    lines.push(...wrapText(c.text));
   }
-  lines.push(jobFooter("End Job"));
+  lines.push(jobFooter());
   u.send(lines.join("\n"));
 }
 
@@ -75,7 +74,7 @@ Examples:
       );
       if (myJobs.length === 0) { u.send(">JOBS: You have no open requests."); return; }
       myJobs.sort((a, b) => a.number - b.number);
-      u.send(formatJobList(myJobs, "POP Jobs").join("\n"));
+      u.send(formatJobList(myJobs, "+Jobs").join("\n"));
       return;
     }
 
@@ -109,8 +108,8 @@ Examples:
         u.send(`Valid buckets: ${getAllBuckets().join(", ")}`);
         return;
       }
-      const title = rest.slice(0, eq).trim();
-      const text  = rest.slice(eq + 1).trim();
+      const title = u.util.stripSubs(rest.slice(0, eq).trim());
+      const text  = u.util.stripSubs(rest.slice(eq + 1).trim());
       if (!title || !text) { u.send("Usage: +request <title>=<text>"); return; }
       if (!isValidBucket(bucket)) {
         u.send(`>JOBS: Invalid bucket '${bucket}'. Valid: ${getAllBuckets().join(", ")}`);
@@ -135,14 +134,14 @@ Examples:
       const eq = arg.indexOf("=");
       if (eq === -1) { u.send("Usage: +request/comment <#>=<text>"); return; }
       const num  = parseInt(arg.slice(0, eq).trim(), 10);
-      const text = arg.slice(eq + 1).trim();
+      const text = u.util.stripSubs(arg.slice(eq + 1).trim());
       if (isNaN(num) || !text) { u.send("Usage: +request/comment <#>=<text>"); return; }
       const job = await getJobByNumber(num);
       if (!job) { u.send(`>JOBS: No request #${num} found.`); return; }
       if (job.submittedBy !== u.me.id && !job.additionalPlayers?.includes(u.me.id)) {
         u.send(">JOBS: Permission denied."); return;
       }
-      const comment: IJobComment = { authorId: u.me.id, authorName: callerName(u), text, timestamp: Date.now(), published: true };
+      const comment: IJobComment = { authorId: u.me.id, authorName: callerName(u), text, timestamp: Date.now(), staffOnly: false };
       job.comments.push(comment);
       job.updatedAt = Date.now();
       await jobs.update({ id: job.id }, job);
@@ -213,7 +212,7 @@ Examples:
     );
     if (myJobs.length === 0) { u.send(">JOBS: You have no open requests."); return; }
     myJobs.sort((a, b) => a.number - b.number);
-    u.send(formatJobList(myJobs, "POP Jobs").join("\n"));
+    u.send(formatJobList(myJobs, "+Jobs").join("\n"));
   },
 });
 
@@ -231,7 +230,7 @@ Examples:
     if (u.me.flags.has("superuser")) {
       if (all.length === 0) { u.send(">JOBS: No open jobs."); return; }
       all.sort((a, b) => a.number - b.number);
-      u.send(formatJobList(all, "POP Jobs").join("\n"));
+      u.send(formatJobList(all, "+Jobs").join("\n"));
       return;
     }
     const myJobs = all.filter(
@@ -239,6 +238,6 @@ Examples:
     );
     if (myJobs.length === 0) { u.send(">JOBS: You have no open requests."); return; }
     myJobs.sort((a, b) => a.number - b.number);
-    u.send(formatJobList(myJobs, "POP Jobs").join("\n"));
+    u.send(formatJobList(myJobs, "+Jobs").join("\n"));
   },
 });

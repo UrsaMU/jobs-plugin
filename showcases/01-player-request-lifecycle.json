@@ -1,0 +1,42 @@
+{
+  "key": "jobs-requests",
+  "label": "Jobs — Player Request Lifecycle",
+  "vars": { "player": "Alice" },
+  "steps": [
+    { "sub": "Submitting Requests" },
+    { "note": "+request <title>=<desc> submits to the default SPHERE bucket. +request/create <bucket>/<title>=<desc> targets a specific bucket." },
+    { "cmd": "+request North Exit Broken=The north exit from the Market leads to a void room instead of the Docks.", "label": "submit to default (SPHERE) bucket" },
+    { "expect": ">JOBS: Request #1 \"North Exit Broken\" submitted to SPHERE." },
+    { "cmd": "+request/create BUG/Login Crash=The game crashes when I try to connect from a mobile client.", "label": "submit to BUG bucket explicitly" },
+    { "expect": ">JOBS: Request #2 \"Login Crash\" submitted to BUG." },
+
+    { "sub": "Viewing and Listing" },
+    { "note": "+requests (or +myjobs) lists every open request you submitted or were added to as a viewer. +request <#> shows one request in full detail." },
+    { "cmd": "+requests", "label": "list all your open requests" },
+    { "expect": "1    SPHERE    North Exit Broken   ...   NEW" },
+    { "expect": "2    BUG       Login Crash         ...   NEW" },
+    { "cmd": "+myjobs", "label": "alias for +requests" },
+    { "cmd": "+request 1", "label": "view request #1 in full detail" },
+    { "expect": "Job Title:  ...  Requester:  Alice" },
+    { "expect": "Category:   SPHERE  ...  Status:  NEW" },
+    { "expect": "  The north exit from the Market leads to a void room instead of the Docks." },
+    { "cmd": "+request 2", "label": "view request #2 in full detail" },
+
+    { "sub": "Comments and Collaboration" },
+    { "note": "+request/comment <#>=<text> appends a visible comment. +request/addplayer <#>=<name> grants read access to another player." },
+    { "cmd": "+request/comment 1=Still happening after relogging. Can reproduce every time.", "label": "add a comment to request #1" },
+    { "expect": ">JOBS: Comment added to request #1." },
+    { "cmd": "+request/addplayer 1=Alice", "label": "add viewer (self-lookup to prove target resolution works)" },
+    { "expect": ">JOBS: Alice added to request #1." },
+    { "cmd": "+request 1", "label": "view request #1 showing the new comment" },
+    { "expect": "  Alice commented on MM-DD-YY:" },
+    { "expect": "  Still happening after relogging. Can reproduce every time." },
+
+    { "sub": "Cancelling" },
+    { "note": "+request/cancel <#> cancels your own request and moves it to the archive with status 'cancelled'." },
+    { "cmd": "+request/cancel 2", "label": "cancel request #2" },
+    { "expect": ">JOBS: Request #2 cancelled." },
+    { "cmd": "+requests", "label": "confirm only request #1 remains open" },
+    { "expect": "1    SPHERE    North Exit Broken   ...   NEW" }
+  ]
+}

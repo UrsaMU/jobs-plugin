@@ -1,0 +1,54 @@
+{
+  "key": "jobs-staff",
+  "label": "Jobs — Staff Job Workflow",
+  "vars": { "player": "Alice" },
+  "steps": [
+    { "sub": "Listing Jobs" },
+    { "note": "+jobs shows all open jobs visible to the calling staff member. +job/bucket <BUCKET> filters to a single bucket." },
+    { "cmd": "+request Help Me=I need assistance with character creation.", "label": "player submits a job first" },
+    { "expect": ">JOBS: Request #1 \"Help Me\" submitted to SPHERE." },
+    { "cmd": "+jobs", "as": "staff", "label": "list all open jobs (staff view)" },
+    { "expect": "1    SPHERE    Help Me   ...   NEW" },
+    { "cmd": "+job/bucket SPHERE", "as": "staff", "label": "filter list to SPHERE bucket" },
+    { "expect": "1    SPHERE    Help Me   ...   NEW" },
+
+    { "sub": "Viewing a Job" },
+    { "note": "+job <#> shows the full staff view including all comments (public and staff-only) and the current handler." },
+    { "cmd": "+job 1", "as": "staff", "label": "view job #1 in full detail" },
+    { "expect": "Job Title:  Help Me                Requester:  Alice" },
+    { "expect": "Category:   SPHERE                 Status:     NEW" },
+    { "expect": "Created:    ...                    Handler:    -----" },
+    { "expect": "  I need assistance with character creation." },
+
+    { "sub": "Claiming and Assigning" },
+    { "note": "+job/claim <#> sets you as the handler. +job/assign <#>=<name> assigns to another staff member — target must have admin/wizard/superuser flag." },
+    { "cmd": "+job/claim 1", "as": "staff", "label": "claim job #1 for yourself" },
+    { "expect": ">JOBS: Job #1 claimed." },
+    { "cmd": "+job/assign 1=Alice", "as": "staff", "label": "assign to Alice — denied, Alice has no staff flag in mock store" },
+    { "expect": ">JOBS: Alice is not a staff member." },
+
+    { "sub": "Comments and Notes" },
+    { "note": "+job/comment adds a public comment visible to the submitter. +job/staffnote adds a staff-only note hidden from the player." },
+    { "cmd": "+job/comment 1=Looking into this now. I can reproduce on the test server.", "as": "staff", "label": "add a public comment" },
+    { "expect": ">JOBS: Comment added to job #1." },
+    { "cmd": "+job/staffnote 1=Alice has reported portal issues twice before. Likely the zone-boundary bug.", "as": "staff", "label": "add a staff-only note (hidden from player)" },
+    { "expect": ">JOBS: Staff note added to job #1." },
+    { "cmd": "+job 1", "as": "staff", "label": "view job with comments and staff note" },
+    { "expect": "  Staff commented on MM-DD-YY:" },
+    { "expect": "  Looking into this now. I can reproduce on the test server." },
+    { "expect": "  Staff [STAFF] commented on MM-DD-YY:" },
+    { "expect": "  Alice has reported portal issues twice before. Likely the zone-boundary" },
+
+    { "sub": "Priority" },
+    { "note": "Valid levels: low, normal, high, critical. Setting priority fires the job:priority-changed hook." },
+    { "cmd": "+job/priority 1=high", "as": "staff", "label": "escalate priority to high" },
+    { "expect": ">JOBS: Job #1 priority set to high." },
+
+    { "sub": "Closing" },
+    { "note": "+job/close <#>[=<comment>] archives the job with status 'closed' and mails the submitter." },
+    { "cmd": "+job/close 1=Fixed in latest patch. The exit link has been corrected.", "as": "staff", "label": "close and archive job #1" },
+    { "expect": ">JOBS: Job #1 closed and archived." },
+    { "cmd": "+jobs", "as": "staff", "label": "confirm job list is now empty" },
+    { "expect": ">JOBS: No open jobs." }
+  ]
+}

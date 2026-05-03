@@ -1,6 +1,7 @@
 // ─── Display / format helpers for jobs commands ───────────────────────────────
 
-import type { IJob } from "@ursamu/ursamu/jobs";
+import type { IJob } from "./types.ts";
+import { themeHeader, themeDivider, themeFooter } from "./theme.ts";
 
 export const WIDTH = 77;
 
@@ -9,50 +10,44 @@ export function isStaffFlags(flags: Set<string>): boolean {
   return flags.has("admin") || flags.has("wizard") || flags.has("superuser");
 }
 
-/**
- * Produces a centered, `=`-bordered header line exactly WIDTH characters wide.
- * @example header("Archived Jobs") → "====== Archived Jobs ======"
- */
-export function header(title: string): string {
-  const t = ` ${title} `;
-  const pad = Math.floor((WIDTH - t.length) / 2);
-  return "=".repeat(pad) + t + "=".repeat(WIDTH - pad - t.length);
-}
+// ── Canonical header/divider/footer (all views use these) ────────────────────
+
+/** Major header — colored border, bold white centered title. */
+export function header(title: string): string { return themeHeader(title, WIDTH); }
+
+/** Section divider — lighter border, optional colored title. */
+export function divider(title = ""): string { return themeDivider(title, WIDTH); }
+
+/** Footer — full-width solid border. */
+export function footer(): string { return themeFooter(WIDTH); }
+
+// Aliases kept so callers don't need to update — all resolve to the same theme.
+export const jobHeader  = header;
+export const jobFooter  = () => footer();
+export const jobDivider = () => divider();
 
 /**
- * Produces a colored `-=-` bordered header with a bold white title, used for
- * individual job view headers. MUSH-safe: all color codes are reset by `%cn`.
+ * Word-wrap plain text to fit within `maxWidth` printable characters.
+ * Returns an array of lines, each prefixed with `indent` spaces.
  */
-export function jobHeader(title: string): string {
-  const t = `%ch%cw< ${title} >%cn`;
-  const tLen = `< ${title} >`.length;
-  const pad = Math.floor((WIDTH - tLen) / 2);
-  const rpad = WIDTH - pad - tLen;
-  return "%cb" + "-=-".repeat(Math.floor(pad / 3)) + "=".repeat(pad % 3) + "%cn" + t +
-    "%cb" + "-=-".repeat(Math.floor(rpad / 3)) + "=".repeat(rpad % 3) + "%cn";
-}
-
-/**
- * Produces the same decorated border as {@link jobHeader}, used at the bottom
- * of a job display block.
- */
-export function jobFooter(title: string): string {
-  return jobHeader(title);
-}
-
-/** Returns a plain 77-character dash separator line. */
-export function divider(): string {
-  return "-".repeat(WIDTH);
-}
-
-/** Returns a blue-colored 77-character dash separator line (MUSH color reset included). */
-export function jobDivider(): string {
-  return "%cb" + "-".repeat(WIDTH) + "%cn";
-}
-
-/** Returns a plain 77-character `=` footer line. */
-export function footer(): string {
-  return "=".repeat(WIDTH);
+export function wrapText(text: string, maxWidth = WIDTH, indent = 2): string[] {
+  const prefix = " ".repeat(indent);
+  const usable = maxWidth - indent;
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (!current) {
+      current = word.slice(0, usable);
+    } else if (current.length + 1 + word.length <= usable) {
+      current += " " + word;
+    } else {
+      lines.push(prefix + current);
+      current = word.slice(0, usable);
+    }
+  }
+  if (current) lines.push(prefix + current);
+  return lines.length ? lines : [prefix];
 }
 
 /**
@@ -117,7 +112,7 @@ export function formatDate(epoch: number): string {
  */
 export function getEscalation(job: IJob): { color: string; label: string } {
   // Escalation is based on time since last staff comment
-  const staffComments = job.comments.filter((c) => c.authorId !== job.submittedBy && c.published);
+  const staffComments = job.comments.filter((c) => c.authorId !== job.submittedBy && !c.staffOnly);
   const lastActivity  = staffComments.length > 0
     ? staffComments[staffComments.length - 1].timestamp
     : job.createdAt;
@@ -171,9 +166,7 @@ export function formatJobList(jobList: IJob[], title: string): string[] {
 
   for (const j of jobList) {
     const esc      = getEscalation(j);
-    const rawBucket  = j.bucket || j.category || "???";
-    const bPad     = Math.max(0, Math.floor((8 - rawBucket.length) / 2));
-    const bucket   = " ".repeat(bPad) + rawBucket;
+    const bucket     = j.bucket || j.category || "???";
     const rawHandler = j.assigneeName || "-----";
     const hPad     = Math.max(0, Math.floor((7 - rawHandler.length) / 2));
     const handler  = " ".repeat(hPad) + rawHandler;
@@ -185,6 +178,6 @@ export function formatJobList(jobList: IJob[], title: string): string[] {
     lines.push(`${plainRow.slice(0, P[5])}${" ".repeat(Math.max(0, statusPad))}${statusColored}`);
   }
 
-  lines.push(jobFooter("End Jobs"));
+  lines.push(jobFooter());
   return lines;
 }

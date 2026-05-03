@@ -1,7 +1,7 @@
 // ─── REST API: /api/v1/jobs ───────────────────────────────────────────────────
 
 import { dbojs } from "@ursamu/ursamu";
-import { jobs, jobArchive, getNextJobNumber } from "./db.ts";
+import { jobs, getNextJobNumber } from "./db.ts";
 import { jobHooks } from "./hooks.ts";
 import type { IJob, IJobComment } from "./types.ts";
 
@@ -27,21 +27,46 @@ async function isStaffUser(userId: string | null): Promise<boolean> {
 }
 
 /**
- * Returns a shallow copy of `job` with all `staffOnly` comments removed,
+ * Returns a shallow copy of `job` with all staff-only comments removed,
  * safe to send in REST responses to non-staff callers.
+ *
+ * A comment is staff-only when:
+ *   - `c.staffOnly === true`  (current field), OR
+ *   - `c.published === false` (legacy field — `published` is the inverse of `staffOnly`)
+ *
+ * If neither field is set the comment is treated as public.
  */
-function stripStaffComments(job: IJob): IJob {
-  return { ...job, comments: job.comments.filter((c) => !c.staffOnly) };
+export function stripStaffComments(job: IJob): IJob {
+  return {
+    ...job,
+    comments: job.comments.filter((c) => {
+      if (c.staffOnly === true) return false;
+      if (c.staffOnly === undefined && c.published === false) return false;
+      return true;
+    }),
+  };
+}
+
+/**
+ * Returns `true` when `num` is a valid job number: a finite integer >= 1.
+ * Exported for unit testing without a DB dependency.
+ */
+export function isValidJobNumber(num: number): boolean {
+  return Number.isFinite(num) && Number.isInteger(num) && num >= 1;
 }
 
 /**
  * Resolves a job by its `idParam` string, which may be either a sequential
  * job number (e.g. `"42"`) or a full UUID string (e.g. `"job-42"`).
  * Returns `null` if no matching active job is found.
+ * Rejects job numbers <= 0 (semantically invalid) before touching the DB.
  */
 async function resolveJob(idParam: string): Promise<IJob | null> {
   const num = parseInt(idParam, 10);
-  if (!isNaN(num)) return (await jobs.queryOne({ number: num })) || null;
+  if (!isNaN(num)) {
+    if (!isValidJobNumber(num)) return null;
+    return (await jobs.queryOne({ number: num })) || null;
+  }
   return (await jobs.queryOne({ id: idParam })) || null;
 }
 

@@ -1,0 +1,37 @@
+{
+  "key": "jobs-resolve",
+  "label": "Jobs — Resolve, Archive, and Reopen",
+  "vars": { "player": "Alice" },
+  "steps": [
+    { "sub": "Resolve a Job" },
+    { "note": "+job/resolve <#>[=<comment>] archives the job with status 'resolved' (distinct from 'closed'). It fires the job:resolved hook and mails the submitter." },
+    { "cmd": "+request Login Crash=The game crashes when connecting from a mobile client.", "label": "player submits the job" },
+    { "expect": ">JOBS: Request #1 \"Login Crash\" submitted to SPHERE." },
+    { "cmd": "+job/claim 1", "as": "staff", "label": "staff claims it first" },
+    { "expect": ">JOBS: Job #1 claimed." },
+    { "cmd": "+job/resolve 1=Issue confirmed fixed. Mobile client crash resolved by engine update v2.4.1.", "as": "staff", "label": "resolve and archive with a closing note" },
+    { "expect": ">JOBS: Job #1 resolved and archived." },
+
+    { "sub": "Archive" },
+    { "note": "+archive lists all archived jobs sorted newest-first. +archive <#> shows the full archived record including all comments." },
+    { "cmd": "+archive", "as": "staff", "label": "list all archived jobs" },
+    { "expect": "1    SPHERE      Login Crash    resolved    MM-DD-YY" },
+    { "expect": "1 archived job." },
+    { "cmd": "+archive 1", "as": "staff", "label": "view archived job #1 in detail" },
+    { "expect": " Title:     Login Crash" },
+    { "expect": " Bucket:    SPHERE" },
+    { "expect": " Submitted: Alice on MM-DD-YY" },
+    { "expect": " Closed by: Staff" },
+    { "expect": " Status:    resolved" },
+    { "expect": "  The game crashes when connecting from a mobile client." },
+    { "expect": "  Staff commented on MM-DD-YY:" },
+    { "expect": "  Issue confirmed fixed. Mobile client crash resolved by engine update" },
+
+    { "sub": "Reopen" },
+    { "note": "+job/reopen <#> moves the job back to active with status 'open' and clears closedByName. The job:reopened hook fires." },
+    { "cmd": "+job/reopen 1", "as": "staff", "label": "reopen archived job #1" },
+    { "expect": ">JOBS: Job #1 reopened." },
+    { "cmd": "+jobs", "as": "staff", "label": "confirm job #1 is active again" },
+    { "expect": "1    SPHERE    Login Crash   ...   Staff" }
+  ]
+}

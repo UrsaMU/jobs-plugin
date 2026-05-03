@@ -5,16 +5,16 @@ import type { IJob, IJobAccess } from "./types.ts";
 import { VALID_BUCKETS } from "./types.ts";
 
 /** Persistent store for all active job records. */
-export const jobs = new DBO<IJob>("server.jobs");
+export const jobs: DBO<IJob> = new DBO<IJob>("server.jobs");
 /** Persistent store for closed/cancelled jobs. */
-export const jobArchive = new DBO<IJob>("server.jobs_archive");
+export const jobArchive: DBO<IJob> = new DBO<IJob>("server.jobs_archive");
 /** Per-bucket staff access lists. */
-export const jobAccess = new DBO<IJobAccess>("server.jobs_access");
+export const jobAccess: DBO<IJobAccess> = new DBO<IJobAccess>("server.jobs_access");
 
 // Access the shared server.counters KV collection for atomic job-number generation.
 // Creating a DBO handle here is safe — atomicIncrement uses Deno KV atomics
 // and multiple handles on the same collection key are guaranteed consistent.
-const _counters = new DBO<Record<string, unknown>>("server.counters");
+const _counters = new DBO<{ id: string; [k: string]: unknown }>("server.counters");
 
 /** Atomically increment and return the next sequential job number (1, 2, 3, …). */
 export function getNextJobNumber(): Promise<number> {

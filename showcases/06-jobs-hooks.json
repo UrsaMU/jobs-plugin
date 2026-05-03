@@ -1,0 +1,62 @@
+{
+  "key": "jobs-hooks",
+  "label": "Jobs — Hook Event Sequence",
+  "vars": { "player": "Alice" },
+  "steps": [
+    { "sub": "job:created — Player Submits a Request" },
+    { "note": "When +request fires successfully, jobHooks.emit('job:created', job) is called with the full IJob object. Listeners receive the new job before the confirmation message is sent." },
+    { "cmd": "+request Hook Test=Testing that hook events fire in the right order.", "label": "fires job:created" },
+    { "expect": ">JOBS: Request #1 \"Hook Test\" submitted to SPHERE." },
+
+    { "sub": "job:commented — Player Adds a Comment" },
+    { "note": "jobHooks.emit('job:commented', job, comment) fires after the comment is persisted. The second argument is the IJobComment that was just appended." },
+    { "cmd": "+request/comment 1=A follow-up note.", "label": "fires job:commented (staffOnly: false)" },
+    { "expect": ">JOBS: Comment added to request #1." },
+
+    { "sub": "job:assigned — Staff Claims or Assigns" },
+    { "note": "Both +job/claim and +job/assign emit job:assigned after updating assignedTo and assigneeName." },
+    { "cmd": "+job/claim 1", "as": "staff", "label": "fires job:assigned (self-claim)" },
+    { "expect": ">JOBS: Job #1 claimed." },
+
+    { "sub": "job:commented — Staff Adds a Public Comment" },
+    { "note": "Staff +job/comment also emits job:commented. staffOnly is false so the player can see it." },
+    { "cmd": "+job/comment 1=On it.", "as": "staff", "label": "fires job:commented (staffOnly: false)" },
+    { "expect": ">JOBS: Comment added to job #1." },
+
+    { "sub": "job:commented — Staff Adds a Staff-Only Note" },
+    { "note": "Staff +job/staffnote emits job:commented with staffOnly: true. Listeners can decide whether to propagate notifications based on this flag." },
+    { "cmd": "+job/staffnote 1=Internal note — not visible to player.", "as": "staff", "label": "fires job:commented (staffOnly: true)" },
+    { "expect": ">JOBS: Staff note added to job #1." },
+
+    { "sub": "job:priority-changed — Priority Updated" },
+    { "note": "jobHooks.emit('job:priority-changed', job, oldPriority) passes both the updated job and the previous priority level." },
+    { "cmd": "+job/priority 1=critical", "as": "staff", "label": "fires job:priority-changed (normal → critical)" },
+    { "expect": ">JOBS: Job #1 priority set to critical." },
+
+    { "sub": "job:closed — Staff Closes the Job" },
+    { "note": "jobHooks.emit('job:closed', job) fires after the job is moved to the archive. The job object has status 'closed'. Submitter receives mail independently of the hook." },
+    { "cmd": "+job/close 1=All done.", "as": "staff", "label": "fires job:closed" },
+    { "expect": ">JOBS: Job #1 closed and archived." },
+
+    { "reset": true },
+
+    { "sub": "job:resolved — Staff Resolves (Alternative Close Path)" },
+    { "note": "+job/resolve emits job:resolved instead of job:closed, letting listeners distinguish 'completed work' from 'admin closure'. The IJob has status 'resolved'." },
+    { "cmd": "+request Resolve Me=Please resolve this one.", "label": "new job for resolve demo" },
+    { "expect": ">JOBS: Request #1 \"Resolve Me\" submitted to SPHERE." },
+    { "cmd": "+job/resolve 1=Fixed upstream.", "as": "staff", "label": "fires job:resolved" },
+    { "expect": ">JOBS: Job #1 resolved and archived." },
+
+    { "sub": "job:reopened — Staff Reopens an Archived Job" },
+    { "note": "jobHooks.emit('job:reopened', job) fires after the job is moved back to active. Status is 'open' and closedByName is cleared." },
+    { "cmd": "+job/reopen 1", "as": "staff", "label": "fires job:reopened" },
+    { "expect": ">JOBS: Job #1 reopened." },
+
+    { "sub": "job:deleted — Superuser Hard-Deletes" },
+    { "note": "jobHooks.emit('job:deleted', job) fires on +job/delete. No archive copy is created. Listeners are the only place downstream systems can react to the deletion." },
+    { "cmd": "+job/delete 1", "as": "superuser", "label": "fires job:deleted (no archive)" },
+    { "expect": ">JOBS: Job #1 permanently deleted." },
+
+    { "reset": true }
+  ]
+}

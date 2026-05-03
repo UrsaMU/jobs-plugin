@@ -3,7 +3,7 @@
 import { addCmd } from "@ursamu/ursamu";
 import type { IUrsamuSDK } from "@ursamu/ursamu";
 import { jobArchive } from "./db.ts";
-import { isStaffFlags, header, divider, footer, formatTimeShort, formatDate } from "./format.ts";
+import { isStaffFlags, divider, footer, formatDate, jobHeader, jobDivider, wrapText } from "./format.ts";
 
 addCmd({
   name: "+archive",
@@ -30,13 +30,13 @@ Examples:
       if (archived.length === 0) { u.send(">JOBS: No archived jobs."); return; }
       archived.sort((a, b) => b.number - a.number);
       const lines = [
-        header("Archived Jobs"),
+        jobHeader("Archived Jobs"),
         `${"#".padEnd(5)}${"Bucket".padEnd(12)}${"Title".padEnd(30)}${"Status".padEnd(12)}Date`,
-        divider(),
+        jobDivider(),
         ...archived.map((j) =>
           `${String(j.number).padEnd(5)}${(j.bucket || j.category || "???").padEnd(12)}${j.title.slice(0, 29).padEnd(30)}${j.status.padEnd(12)}${formatDate(j.updatedAt)}`
         ),
-        divider(),
+        jobDivider(),
         `${archived.length} archived job${archived.length === 1 ? "" : "s"}.`,
       ];
       u.send(lines.join("\n"));
@@ -50,20 +50,19 @@ Examples:
       const job = archived.find((j) => j.number === num);
       if (!job) { u.send(`>JOBS: No archived job #${num} found.`); return; }
       const lines = [
-        header(`Archived Job #${job.number}`),
+        jobHeader(`Archived Job #${job.number}`),
         ` Title:     ${job.title}`,
         ` Bucket:    ${job.bucket}`,
         ` Submitted: ${job.submitterName} on ${formatDate(job.createdAt)}`,
         ` Closed by: ${job.closedByName || "Unknown"}`,
         ` Status:    ${job.status}`,
-        divider(),
-        job.description,
+        jobDivider(),
+        ...wrapText(job.description),
       ];
-      if (job.comments.length > 0) {
-        lines.push(divider(), header("Comments"));
-        for (const c of job.comments) {
-          lines.push(`%ch%cy${c.authorName}%cn [${formatTimeShort(c.timestamp)}]: ${c.text}`);
-        }
+      for (const c of job.comments) {
+        lines.push(divider());
+        lines.push(`  %ch%cy${c.authorName}%cn commented on ${formatDate(c.timestamp)}:`);
+        lines.push(...wrapText(c.text));
       }
       lines.push(footer());
       u.send(lines.join("\n"));

@@ -6,6 +6,7 @@ import { getAllBuckets, getBucketStaffIds, jobAccess } from "./db.ts";
 import type { IPlugin } from "@ursamu/ursamu";
 import { jobsRouteHandler } from "./router.ts";
 import { registerNotifyHooks, removeNotifyHooks } from "./notify.ts";
+import { loadTheme } from "./theme.ts";
 
 /**
  * UrsaMU Jobs Plugin — Anomaly-style jobs/request system.
@@ -25,6 +26,14 @@ const jobsPlugin: IPlugin = {
   description: "Anomaly-style jobs system — player requests, staff commands, bucket access, archive, REST API.",
 
   init: async () => {
+    await loadTheme();
+
+    // Register help directory if the help-plugin is available.
+    try {
+      const { registerHelpDir } = await import("@ursamu/help-plugin");
+      registerHelpDir(new URL("./help", import.meta.url).pathname, "jobs");
+    } catch { /* help-plugin not installed — skip */ }
+
     registerPluginRoute("/api/v1/jobs", jobsRouteHandler);
     registerNotifyHooks();
 

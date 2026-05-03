@@ -1,0 +1,33 @@
+{
+  "key": "jobs-access",
+  "label": "Jobs — Bucket Access Control",
+  "vars": { "player": "Alice" },
+  "steps": [
+    { "sub": "View Access Map" },
+    { "note": "+job/listaccess shows every configured bucket and which staff IDs (if any) have explicit access. '(all staff)' means no restriction is set for that bucket. Requires superuser." },
+    { "cmd": "+job/listaccess", "as": "superuser", "label": "view the full bucket access map" },
+    { "expect": " BUG            (all staff)" },
+    { "expect": " CGEN           (all staff)" },
+    { "expect": " SPHERE         (all staff)" },
+
+    { "sub": "Grant and Revoke" },
+    { "note": "+job/addaccess <BUCKET>=<name> grants a staff member explicit access to a bucket. Once any entry exists, only listed staff can see that bucket. +job/removeaccess reverses this." },
+    { "cmd": "+job/addaccess CGEN=Alice", "as": "superuser", "label": "grant Alice access to the CGEN bucket" },
+    { "expect": ">JOBS: Alice granted access to CGEN bucket." },
+    { "cmd": "+job/listaccess", "as": "superuser", "label": "confirm CGEN now shows Alice's ID" },
+    { "expect": " CGEN           mock-alice" },
+    { "cmd": "+job/removeaccess CGEN=Alice", "as": "superuser", "label": "revoke Alice's access to CGEN" },
+    { "expect": ">JOBS: Alice removed from CGEN bucket." },
+    { "cmd": "+job/listaccess", "as": "superuser", "label": "confirm CGEN returns to (all staff)" },
+    { "expect": " CGEN           (all staff)" },
+
+    { "sub": "Filter by Bucket" },
+    { "note": "+job/bucket <BUCKET> limits the staff job list to a single bucket. The calling staff member must have access to that bucket." },
+    { "cmd": "+request/create BUG/Typo in +pose=Extra space after the colon in pose output.", "label": "player submits a BUG-bucket job" },
+    { "expect": ">JOBS: Request #1 \"Typo in +pose\" submitted to BUG." },
+    { "cmd": "+job/bucket BUG", "as": "staff", "label": "filter job list to BUG bucket only" },
+    { "expect": "1    BUG       Typo in +pose   ...   NEW" },
+
+    { "reset": true }
+  ]
+}
