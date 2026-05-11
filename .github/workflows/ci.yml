@@ -17,6 +17,15 @@ jobs:
         with:
           deno-version: v2.x
 
+      - name: Cache dependencies
+        # Pre-fetch JSR deps including the softcode worker module (loaded
+        # dynamically via new Worker() — not seen by `deno cache mod.ts`).
+        # The softcode worker has a 150 ms boot budget which can't absorb a
+        # JSR download on cold-cache CI runs.
+        run: |
+          deno cache mod.ts tests/*.ts
+          deno cache https://jsr.io/@ursamu/ursamu/2.3.0/src/services/Softcode/softcode-worker.ts
+
       - name: Type check
         run: deno check mod.ts
 
