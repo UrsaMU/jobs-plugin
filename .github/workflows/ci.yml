@@ -36,4 +36,6 @@ jobs:
         run: deno task test
 
       - name: Dry-run publish
-        run: deno publish --dry-run
+        # --allow-dirty: tests open a Deno.Kv at data/ursamu.db; that path is
+        # gitignored but `deno publish` still sees it as an untracked change.
+        run: deno publish --dry-run --allow-dirty
