@@ -5,7 +5,7 @@ import type { IUrsamuSDK } from "@ursamu/ursamu";
 import { jobs, jobArchive, getNextJobNumber, isValidBucket, getAllBuckets } from "./db.ts";
 import { jobHooks } from "./hooks.ts";
 import type { IJob, IJobComment } from "./types.ts";
-import { jobHeader, jobFooter, jobDivider, formatTimeFull, formatDate, getEscalation, isNew, formatJobList, wrapText } from "./format.ts";
+import { jobHeader, jobFooter, jobDivider, formatTimeFull, formatDate, getEscalation, isNew, renderJobList, wrapText } from "./format.ts";
 import { getJobByNumber } from "./job-utils.ts";
 import { sendJobMail } from "./mail.ts";
 
@@ -66,7 +66,9 @@ Examples:
   +request My Issue=Please help with X.   Submit a request to the default bucket.
   +request 3                              View request #3.
   +request/comment 3=Thanks for looking.  Comment on request #3.
-  +request/cancel 3                       Cancel request #3.`,
+  +request/cancel 3                       Cancel request #3.
+
+Format hooks: set @joblistformat / @jobrowformat on #0 (game-wide) or self.`,
   exec: async (u: IUrsamuSDK) => {
     if (u.cmd.original?.trim().match(/^\+requests?\s*$/i)) {
       const myJobs = (await jobs.find({})).filter(
@@ -74,7 +76,7 @@ Examples:
       );
       if (myJobs.length === 0) { u.send(">JOBS: You have no open requests."); return; }
       myJobs.sort((a, b) => a.number - b.number);
-      u.send(formatJobList(myJobs, "+Jobs").join("\n"));
+      u.send(await renderJobList(u, myJobs, "+Jobs"));
       return;
     }
 
@@ -205,14 +207,16 @@ addCmd({
 
 Examples:
   +requests   Show all open requests you submitted.
-  +requests   Also shows requests you were added to as a viewer.`,
+  +requests   Also shows requests you were added to as a viewer.
+
+Format hooks: set @joblistformat / @jobrowformat on #0 (game-wide) or self.`,
   exec: async (u: IUrsamuSDK) => {
     const myJobs = (await jobs.find({})).filter(
       (j) => j.submittedBy === u.me.id || j.additionalPlayers?.includes(u.me.id),
     );
     if (myJobs.length === 0) { u.send(">JOBS: You have no open requests."); return; }
     myJobs.sort((a, b) => a.number - b.number);
-    u.send(formatJobList(myJobs, "+Jobs").join("\n"));
+    u.send(await renderJobList(u, myJobs, "+Jobs"));
   },
 });
 
@@ -224,13 +228,15 @@ addCmd({
 
 Examples:
   +myjobs   Show your open requests (same as +requests).
-  +myjobs   Superusers: shows all open jobs across all players.`,
+  +myjobs   Superusers: shows all open jobs across all players.
+
+Format hooks: set @joblistformat / @jobrowformat on #0 (game-wide) or self.`,
   exec: async (u: IUrsamuSDK) => {
     const all = await jobs.find({});
     if (u.me.flags.has("superuser")) {
       if (all.length === 0) { u.send(">JOBS: No open jobs."); return; }
       all.sort((a, b) => a.number - b.number);
-      u.send(formatJobList(all, "+Jobs").join("\n"));
+      u.send(await renderJobList(u, all, "+Jobs"));
       return;
     }
     const myJobs = all.filter(
@@ -238,6 +244,6 @@ Examples:
     );
     if (myJobs.length === 0) { u.send(">JOBS: You have no open requests."); return; }
     myJobs.sort((a, b) => a.number - b.number);
-    u.send(formatJobList(myJobs, "+Jobs").join("\n"));
+    u.send(await renderJobList(u, myJobs, "+Jobs"));
   },
 });

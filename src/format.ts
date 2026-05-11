@@ -2,6 +2,53 @@
 
 import type { IJob } from "./types.ts";
 import { themeHeader, themeDivider, themeFooter } from "./theme.ts";
+import {
+  resolveFormat,
+  dbojs,
+  type FormatSlot,
+  type IUrsamuSDK,
+  type IDBObj,
+} from "@ursamu/ursamu";
+
+/**
+ * Local hydrate — converts a raw IDBOBJ row to the IDBObj shape `resolveFormat`
+ * expects. Mirrors `hydrate()` in ursamu's `src/utils/evaluateLock.ts` (not
+ * re-exported from the package, so we duplicate the minimal version here).
+ */
+function hydrateRow(row: { id: string; flags: string; location?: string; data?: Record<string, unknown> }): IDBObj {
+  return {
+    id: row.id,
+    name: (row.data?.name as string) || (row.data?.moniker as string) || "Unknown",
+    flags: new Set((row.flags ?? "").split(" ").filter(Boolean)),
+    location: row.location,
+    state: row.data ?? {},
+    contents: [],
+  } as IDBObj;
+}
+
+/**
+ * Two-tier format lookup mirroring ursamu's `resolveGlobalFormat` in
+ * `src/commands/ps.ts`: check `#0` (root, game-wide skin) first, then the
+ * enactor (`u.me`, per-player skin). Returns null if neither yields an
+ * override and the caller should fall back to its built-in rendering.
+ *
+ * Cast slot names with `as FormatSlot` — the literal union is internal to
+ * ursamu and does not include jobs-plugin custom slots like
+ * `"JOBLISTFORMAT"` / `"JOBROWFORMAT"`.
+ */
+export async function resolveGlobalFormat(
+  u: IUrsamuSDK,
+  slot: FormatSlot,
+  defaultArg: string,
+): Promise<string | null> {
+  const root = await dbojs.queryOne({ id: "0" });
+  if (root) {
+    const rootObj = hydrateRow(root as unknown as Parameters<typeof hydrateRow>[0]);
+    const out = await resolveFormat(u, rootObj, slot, defaultArg);
+    if (out != null) return out;
+  }
+  return await resolveFormat(u, u.me, slot, defaultArg);
+}
 
 export const WIDTH = 77;
 
@@ -180,4 +227,87 @@ export function formatJobList(jobList: IJob[], title: string): string[] {
 
   lines.push(jobFooter());
   return lines;
+}
+
+// ── Format-attribute integration ─────────────────────────────────────────────
+
+/**
+ * Default-renders a single job row in the same column layout used by
+ * `formatJobList`. Extracted so that the per-row override boundary
+ * (`@jobrowformat`) can pass the default rendering as `%0`.
+ */
+function defaultJobRow(j: IJob): string {
+  const P = [0, 5, 15, 47, 60, 71];
+  const placeLine = (cols: string[]): string => {
+    const row = " ".repeat(WIDTH).split("");
+    for (let i = 0; i < cols.length && i < P.length; i++) {
+      const maxW = (i + 1 < P.length ? P[i + 1] - P[i] - 1 : WIDTH - P[i]);
+      const text = cols[i].slice(0, maxW);
+      for (let c = 0; c < text.length; c++) {
+        if (P[i] + c < WIDTH) row[P[i] + c] = text[c];
+      }
+    }
+    return row.join("");
+  };
+  const esc      = getEscalation(j);
+  const bucket     = j.bucket || j.category || "???";
+  const rawHandler = j.assigneeName || "-----";
+  const hPad     = Math.max(0, Math.floor((7 - rawHandler.length) / 2));
+  const handler  = " ".repeat(hPad) + rawHandler;
+  const rawStatus  = esc.label || "";
+  const statusColored = rawStatus ? `${esc.color}${rawStatus}%cn` : "";
+  const plainRow = placeLine([String(j.number), bucket, j.title, formatDate(j.createdAt), handler, ""]);
+  const statusPad = WIDTH - P[5] - rawStatus.length;
+  return `${plainRow.slice(0, P[5])}${" ".repeat(Math.max(0, statusPad))}${statusColored}`;
+}
+
+/**
+ * Async job-list renderer with format-attribute hooks.
+ *
+ * Slots (looked up two-tier — `#0` first, then enactor):
+ *   `@jobrowformat`  — per-row override, `%0` = default-rendered job row.
+ *   `@joblistformat` — full block override, `%0` = default rendered block.
+ *
+ * Falls back to `formatJobList` output when neither attr / plugin handler
+ * yields a value. Returns the final string (already newline-joined).
+ */
+export async function renderJobList(
+  u: IUrsamuSDK,
+  jobList: IJob[],
+  title: string,
+): Promise<string> {
+  // 1. Per-row overrides
+  const renderedRows: string[] = [];
+  for (const j of jobList) {
+    const defaultText = defaultJobRow(j);
+    const rowOverride = await resolveGlobalFormat(u, "JOBROWFORMAT" as FormatSlot, defaultText);
+    renderedRows.push(rowOverride != null ? rowOverride : defaultText);
+  }
+
+  // 2. Assemble default block with the (possibly overridden) rows
+  const lines: string[] = [];
+  lines.push(jobHeader(title));
+  const P = [0, 5, 15, 47, 60, 71];
+  const hdrCols = [" "].concat(["#", "Category", "Title", "Started", "Handler"]);
+  const headerPlain = (() => {
+    const row = " ".repeat(WIDTH).split("");
+    const cols = ["#", "Category", "Title", "Started", "Handler"];
+    for (let i = 0; i < cols.length; i++) {
+      const text = cols[i];
+      for (let c = 0; c < text.length; c++) {
+        if (P[i] + c < WIDTH) row[P[i] + c] = text[c];
+      }
+    }
+    return row.join("");
+  })();
+  void hdrCols;
+  lines.push(`%cc${headerPlain.slice(0, P[5])}${"Status".padStart(WIDTH - P[5])}%cn`);
+  lines.push(jobDivider());
+  for (const r of renderedRows) lines.push(r);
+  lines.push(jobFooter());
+  const defaultBlock = lines.join("\n");
+
+  // 3. Block override
+  const blockOverride = await resolveGlobalFormat(u, "JOBLISTFORMAT" as FormatSlot, defaultBlock);
+  return blockOverride != null ? blockOverride : defaultBlock;
 }

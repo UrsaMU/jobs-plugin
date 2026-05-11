@@ -5,7 +5,7 @@ import type { IUrsamuSDK } from "@ursamu/ursamu";
 import { jobs, jobArchive, isValidBucket, getAllBuckets, jobAccess } from "./db.ts";
 import { jobHooks } from "./hooks.ts";
 import type { IJob, IJobComment, IJobAccess } from "./types.ts";
-import { isStaffFlags, header, footer, divider, jobHeader, jobFooter, jobDivider, formatTimeFull, formatDate, getEscalation, isNew, formatJobList, wrapText } from "./format.ts";
+import { isStaffFlags, header, footer, divider, jobHeader, jobFooter, jobDivider, formatTimeFull, formatDate, getEscalation, isNew, renderJobList, wrapText } from "./format.ts";
 import { currentTheme, configTheme, saveThemeOverlay, resetThemeOverlay, DEFAULT_THEME } from "./theme.ts";
 
 type TokenKey = keyof typeof DEFAULT_THEME.tokens;
@@ -45,7 +45,7 @@ export async function listStaffJobs(u: IUrsamuSDK, filterBucket?: string): Promi
     u.send(filterBucket ? `>JOBS: No open jobs in ${filterBucket}.` : ">JOBS: No open jobs.");
     return;
   }
-  u.send(formatJobList(visible, filterBucket ? `+Jobs — ${filterBucket}` : "+Jobs").join("\n"));
+  u.send(await renderJobList(u, visible, filterBucket ? `+Jobs — ${filterBucket}` : "+Jobs"));
 }
 
 addCmd({
@@ -76,7 +76,9 @@ Examples:
   +job 5                    View job #5.
   +job/comment 5=On it.     Add a comment to job #5.
   +job/assign 5=Alice       Assign job #5 to Alice.
-  +job/close 5=All done.    Close and archive job #5.`,
+  +job/close 5=All done.    Close and archive job #5.
+
+Format hooks: set @joblistformat / @jobrowformat on #0 (game-wide) or self.`,
   exec: async (u: IUrsamuSDK) => {
     if (u.cmd.original?.trim().match(/^\+jobs\s*$/i)) { await listStaffJobs(u); return; }
     if (!isStaffFlags(u.me.flags)) { u.send(">JOBS: Staff only."); return; }
@@ -475,7 +477,9 @@ addCmd({
 
 Examples:
   +jobs   Show all open jobs visible to your role.
-  +jobs   Superusers see every bucket; others only see their permitted buckets.`,
+  +jobs   Superusers see every bucket; others only see their permitted buckets.
+
+Format hooks: set @joblistformat / @jobrowformat on #0 (game-wide) or self.`,
   exec: async (u: IUrsamuSDK) => { await listStaffJobs(u); },
 });
 
