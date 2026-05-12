@@ -1,0 +1,7 @@
+# Test/runtime artifacts
+data/
+.deno/
+*.log
+
+# OS noise
+.DS_Store

@@ -13,13 +13,14 @@
     "jsr:@std/path@0.224.0": "0.224.0",
     "jsr:@std/semver@1": "1.0.8",
     "jsr:@std/testing@0.224": "0.224.0",
-    "jsr:@ursamu/ursamu@2": "2.0.0",
+    "jsr:@ursamu/mushcode@0.6": "0.6.0",
+    "jsr:@ursamu/ursamu@^2.3.0": "2.3.0",
     "jsr:@zaubrik/djwt@^3.0.2": "3.0.2",
     "npm:@deno/sandbox@0.10.0": "0.10.0",
     "npm:@digibear/tags@1.0.0": "1.0.0",
     "npm:@ursamu/parser@1.2.4": "1.2.4",
     "npm:bcryptjs@2.4.3": "2.4.3",
-    "npm:lodash@^4.18.1": "4.18.1",
+    "npm:lodash@4.17.21": "4.17.21",
     "npm:quickjs-emscripten@0.29.0": "0.29.0",
     "npm:sucrase@3.35.0": "3.35.0"
   },
@@ -71,8 +72,11 @@
     "@std/testing@0.224.0": {
       "integrity": "371b8a929aa7132240d5dd766a439be8f780ef5c176ab194e0bcab72370c761e"
     },
-    "@ursamu/ursamu@2.0.0": {
-      "integrity": "f9c86e52809c4fa3aff9c9320c5913dd0f340b2772ec8c56ec10618cfb15a760",
+    "@ursamu/mushcode@0.6.0": {
+      "integrity": "0503df5a0b1a16b3335739ae7d335cf142746527f5be47f41711b6639ad88ee5"
+    },
+    "@ursamu/ursamu@2.3.0": {
+      "integrity": "fff2f8138300117f88e1f06631fe109491f1df73a767d54fa880eb11553753fb",
       "dependencies": [
         "jsr:@std/dotenv",
         "jsr:@std/flags",
@@ -81,6 +85,7 @@
         "jsr:@std/path@0.224",
         "jsr:@std/path@0.224.0",
         "jsr:@std/semver",
+        "jsr:@ursamu/mushcode",
         "jsr:@zaubrik/djwt",
         "npm:@deno/sandbox",
         "npm:@digibear/tags",
@@ -287,8 +292,8 @@
     "lines-and-columns@1.2.4": {
       "integrity": "sha512-7ylylesZQ/PV29jhEDl3Ufjo6ZX7gCqJr5F7PKrqc93v7fzSymt1BpwEU8nAUXs8qzzvqhbjhK5QZg6Mt/HkBg=="
     },
-    "lodash@4.18.1": {
-      "integrity": "sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q=="
+    "lodash@4.17.21": {
+      "integrity": "sha512-v2kDEe57lecTulaDIuNTPy3Ry4gLGJ6Z1O3vE1krgXZNrsQ+LFTGHVxVjcXPs17LhbZVGedAJv8XZ1tvj5FvSg=="
     },
     "lru-cache@10.4.3": {
       "integrity": "sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ=="
@@ -461,7 +466,7 @@
       "jsr:@std/fs@0.224",
       "jsr:@std/path@0.224",
       "jsr:@std/testing@0.224",
-      "jsr:@ursamu/ursamu@2"
+      "jsr:@ursamu/ursamu@^2.3.0"
     ]
   }
 }

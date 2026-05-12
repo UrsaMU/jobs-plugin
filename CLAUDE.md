@@ -4,7 +4,12 @@
 
 Standalone Deno/JSR package (`@ursamu/jobs-plugin`) providing an Anomaly-style
 jobs/request system for UrsaMU games. This is **not** inside the engine repo —
-it is a consumer of `jsr:@ursamu/ursamu`.
+it is a consumer of `jsr:@ursamu/ursamu` (current pin: **^2.3.0**).
+
+- **API reference**: `/Users/kumakun/.claude/skills/ursamu-dev/references/api-reference.md`
+  is authoritative for every type, method, import path, and event payload
+  exported from `jsr:@ursamu/ursamu`. Read it before writing code. Never guess
+  signatures.
 
 ---
 
@@ -185,6 +190,41 @@ with a catch-all switch pattern must route all sub-commands internally.
 | `"connected"` | Any logged-in player |
 | `"connected admin+"` | Admin flag or higher |
 | `"connected wizard"` | Wizard only |
+
+### Lockfunc system (v2.2+)
+
+Lock strings support callable functions `funcname(arg1, arg2)` combined with
+`&&`, `||`, `!`, and `()`. Built-ins: `flag`, `attr`, `type`, `is`, `holds`,
+`perm`. Register plugin-specific lockfuncs with `registerLockFunc`:
+
+```typescript
+import { registerLockFunc } from "jsr:@ursamu/ursamu";
+
+registerLockFunc("bucketstaff", (enactor, _target, args) => {
+  // ...checks bucket access for args[0]
+  return true;
+});
+// lock: "bucketstaff(BUG) || perm(admin)"
+```
+
+Built-in names are protected — registering over them throws. Locks are
+fail-closed: unknown func → false, error → false.
+
+---
+
+## Format-attribute hooks (v2.3+)
+
+Jobs commands that render a list (`+request`, `+requests`, `+myjobs`, `+job`,
+`+jobs`) honour two format slots via `resolveFormat` from `jsr:@ursamu/ursamu`:
+
+- `@joblistformat` — full block override; `%0` carries the default rendered block.
+- `@jobrowformat`  — per-row override; `%0` carries the default rendered row.
+
+Scope is two-tier — `#0` first (game-wide skin), then enactor (per-player skin).
+The boundary lives in `src/format.ts → renderJobList(u, jobs, title)`; do not
+duplicate it inside command files. Plugins can also fall back via
+`registerFormatHandler("JOBLISTFORMAT" as FormatSlot, fn)` (cast required —
+the literal union is internal to ursamu and does not enumerate plugin slots).
 
 ---
 
@@ -403,6 +443,10 @@ Deno.test("description", OPTS, async () => { /* ... */ });
 - [ ] Multi-page topics linked with `SEE ALSO:`
 - [ ] Sub-files open with a back-reference to the parent topic
 - [ ] Help file body uses subtle markdown — no headings, no HTML
+- [ ] List-rendering commands route through `renderJobList` — never call
+      `formatJobList` directly outside `format.ts`
+- [ ] Custom lockfuncs registered via `registerLockFunc` — never overwrite
+      built-in names (`flag`/`attr`/`type`/`is`/`holds`/`perm`)
 
 ---
 
