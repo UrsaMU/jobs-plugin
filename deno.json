@@ -4,7 +4,7 @@
     "test": "deno test --allow-all --unstable-kv --no-check tests/",
     "showcase": "deno run --allow-all --unstable-kv tools/showcase.ts"
   },
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Anomaly-style job/request tracking system for UrsaMU — player requests, staff commands, bucket access, archive, and REST API.",
   "license": "MIT",
   "exports": "./mod.ts",
