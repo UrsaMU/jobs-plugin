@@ -64,11 +64,21 @@ function mergeTheme(base: JobsTheme, overlay: PartialJobsTheme): JobsTheme {
 
 // ── Config file ───────────────────────────────────────────────────────────────
 
-const CONFIG_PATH = fromFileUrl(new URL("../../config/jobs-theme.json", import.meta.url));
+// Lazy resolution — `import.meta.url` may be an https URL when the module is
+// loaded via `https://raw.githubusercontent.com/.../theme.ts` (e.g. by other
+// plugins importing through deep paths). `fromFileUrl` throws on non-file
+// schemes, so defer it until the consumer actually needs the path.
+function resolveConfigPath(): string | null {
+  const url = new URL("../../config/jobs-theme.json", import.meta.url);
+  if (url.protocol !== "file:") return null;
+  return fromFileUrl(url);
+}
 
 async function readJsonConfig(): Promise<PartialJobsTheme> {
+  const path = resolveConfigPath();
+  if (!path) return {};
   try {
-    return JSON.parse(await Deno.readTextFile(CONFIG_PATH)) as PartialJobsTheme;
+    return JSON.parse(await Deno.readTextFile(path)) as PartialJobsTheme;
   } catch { return {}; }
 }
 
